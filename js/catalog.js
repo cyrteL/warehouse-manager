@@ -130,11 +130,6 @@ class CatalogManager {
 
     // Заполнение фильтра категорий
     populateCategoryFilters(categories) {
-        if (!categories || categories.length === 0) {
-            console.warn('Нет категорий для отображения');
-            return;
-        }
-
         const categoryFilter = $('#categoryFilter');
         const addItemCategory = $('#itemCategory');
         const editItemCategory = $('#editItemCategory');
@@ -144,15 +139,23 @@ class CatalogManager {
         addItemCategory.find('option:not(:first)').remove();
         editItemCategory.find('option:not(:first)').remove();
         
+        // Добавляем опцию "Без категории"
+        const uncategorizedOption = `<option value="uncategorized">Без категории</option>`;
+        categoryFilter.append(uncategorizedOption);
+        addItemCategory.append(uncategorizedOption);
+        editItemCategory.append(uncategorizedOption);
+        
         // Добавляем категории
-        categories.forEach(category => {
-            if (category && category.id && category.name) {
-                const option = `<option value="${category.id}">${category.name}</option>`;
-                categoryFilter.append(option);
-                addItemCategory.append(option);
-                editItemCategory.append(option);
-            }
-        });
+        if (categories && categories.length > 0) {
+            categories.forEach(category => {
+                if (category && category.id && category.name) {
+                    const option = `<option value="${category.id}">${category.name}</option>`;
+                    categoryFilter.append(option);
+                    addItemCategory.append(option);
+                    editItemCategory.append(option);
+                }
+            });
+        }
     }
 
     // Обработка поиска
@@ -441,8 +444,8 @@ class CatalogManager {
 
     // Получение информации о категории
     getCategoryInfo(categoryId) {
-        if (!categoryId) {
-            return { id: 'unknown', name: 'Без категории', icon: 'fas fa-box' };
+        if (!categoryId || categoryId === 'uncategorized') {
+            return { id: 'uncategorized', name: 'Без категории', icon: 'fas fa-box' };
         }
 
         // Используем категории из warehouse
@@ -723,6 +726,9 @@ class CatalogManager {
             $('#profileDropdown').hide();
             $('#adminDropdown').hide();
         }
+        
+        // Обновляем права доступа для элементов интерфейса
+        auth.updateButtonPermissions();
     }
 
     // Загрузка категорий в навигацию
@@ -755,18 +761,8 @@ class CatalogManager {
 
     // Обновление прав доступа
     updatePermissions() {
-        const user = auth.getCurrentUser();
-        if (!user) return;
-
-        // Показываем кнопку добавления для администраторов и менеджеров
-        if (auth.hasRole('admin') || auth.hasRole('manager')) {
-            $('#addItemBtn').show();
-        } else {
-            $('#addItemBtn').hide();
-        }
-
-        // Показываем кнопку экспорта для всех авторизованных пользователей
-        $('#exportBtn').show();
+        // Используем централизованную систему управления правами из auth.js
+        auth.updateButtonPermissions();
     }
 
     // Загрузка категорий в выпадающее меню
@@ -781,20 +777,59 @@ class CatalogManager {
             // Добавляем активные категории
             categories.forEach(category => {
                 if (category.active) {
+                    const isEmpty = category.itemCount === 0;
                     const categoryLink = `
                         <li>
-                            <a class="dropdown-item" href="catalog.html?category=${category.id}" title="${category.description || ''}">
-                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
-                                ${category.name}
+                            <a class="dropdown-item ${isEmpty ? 'empty-category' : ''}" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <div class="category-info">
+                                    <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                    <span>${category.name}</span>
+                                </div>
+                                <span class="category-count">${category.itemCount || 0}</span>
                             </a>
                         </li>
                     `;
                     dropdown.append(categoryLink);
                 }
             });
+            
+            // Инициализируем hover-функциональность
+            this.initHoverDropdown();
         } catch (error) {
             console.error('Ошибка загрузки категорий в выпадающее меню:', error);
         }
+    }
+    
+    // Инициализация hover-функциональности для выпадающего меню
+    initHoverDropdown() {
+        const $dropdown = $('.nav-item.dropdown');
+        const $dropdownMenu = $dropdown.find('.dropdown-menu');
+        let hoverTimeout;
+        
+        // Показываем меню при наведении
+        $dropdown.on('mouseenter', function() {
+            clearTimeout(hoverTimeout);
+            $(this).find('.dropdown-menu').addClass('show');
+        });
+        
+        // Скрываем меню при уходе мыши
+        $dropdown.on('mouseleave', function() {
+            const $menu = $(this).find('.dropdown-menu');
+            hoverTimeout = setTimeout(() => {
+                $menu.removeClass('show');
+            }, 150); // Небольшая задержка для плавности
+        });
+        
+        // Предотвращаем скрытие при наведении на само меню
+        $dropdownMenu.on('mouseenter', function() {
+            clearTimeout(hoverTimeout);
+        });
+        
+        $dropdownMenu.on('mouseleave', function() {
+            hoverTimeout = setTimeout(() => {
+                $(this).removeClass('show');
+            }, 150);
+        });
     }
 
     // Обработка параметра категории из URL

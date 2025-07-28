@@ -36,58 +36,7 @@ class WarehouseManager {
 
     // Получение категорий по умолчанию
     getDefaultCategories() {
-        return [
-            {
-                id: 'electronics',
-                name: 'Электроника',
-                description: 'Электронные компоненты и устройства',
-                icon: 'fas fa-microchip',
-                color: '#2c5aa0',
-                active: true,
-                itemCount: 0,
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: 'components',
-                name: 'Компоненты',
-                description: 'Радиодетали и электронные компоненты',
-                icon: 'fas fa-cogs',
-                color: '#28a745',
-                active: true,
-                itemCount: 0,
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: 'tools',
-                name: 'Инструменты',
-                description: 'Ручной и электроинструмент',
-                icon: 'fas fa-tools',
-                color: '#ffc107',
-                active: true,
-                itemCount: 0,
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: 'office',
-                name: 'Офисные принадлежности',
-                description: 'Канцелярские товары и офисное оборудование',
-                icon: 'fas fa-briefcase',
-                color: '#6c757d',
-                active: true,
-                itemCount: 0,
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: 'furniture',
-                name: 'Мебель',
-                description: 'Офисная мебель и оборудование',
-                icon: 'fas fa-chair',
-                color: '#8b4513',
-                active: true,
-                itemCount: 0,
-                createdAt: new Date().toISOString()
-            }
-        ];
+        return [];
     }
 
     // Сохранение категорий
@@ -98,7 +47,9 @@ class WarehouseManager {
     // Обновление количества позиций в категориях
     updateCategoryItemCounts() {
         this.categories.forEach(category => {
-            category.itemCount = this.items.filter(item => item.category === category.id).length;
+            const itemsInCategory = this.items.filter(item => item.category === category.id);
+            category.itemCount = itemsInCategory.length;
+            category.totalQuantity = itemsInCategory.reduce((sum, item) => sum + (item.quantity || 0), 0);
         });
         this.saveCategories();
     }
@@ -114,78 +65,7 @@ class WarehouseManager {
 
             // Получение позиций по умолчанию
     getDefaultItems() {
-        return [
-            {
-                id: 1,
-                name: 'Ноутбук Dell Inspiron',
-                category: 'electronics',
-                price: 45000,
-                quantity: 15,
-                description: '15.6" Full HD, Intel Core i5, 8GB RAM, 256GB SSD',
-                barcode: '1234567890123',
-                minQuantity: 5,
-                location: 'Стеллаж A-1',
-                supplier: 'Dell Inc.',
-                createdAt: '2025-01-15T10:00:00Z',
-                updatedAt: '2025-01-15T10:00:00Z'
-            },
-            {
-                id: 2,
-                name: 'Принтер HP LaserJet',
-                category: 'electronics',
-                price: 12000,
-                quantity: 8,
-                description: 'Лазерный принтер, монохромный, 20 стр/мин',
-                barcode: '1234567890124',
-                minQuantity: 3,
-                location: 'Стеллаж A-2',
-                supplier: 'HP Inc.',
-                createdAt: '2025-01-10T14:30:00Z',
-                updatedAt: '2025-01-10T14:30:00Z'
-            },
-            {
-                id: 3,
-                name: 'Офисный стул',
-                category: 'office',
-                price: 3500,
-                quantity: 25,
-                description: 'Офисный стул с подлокотниками, черный',
-                barcode: '1234567890125',
-                minQuantity: 10,
-                location: 'Стеллаж B-1',
-                supplier: 'МебельСтрой',
-                createdAt: '2025-01-05T09:15:00Z',
-                updatedAt: '2025-01-05T09:15:00Z'
-            },
-            {
-                id: 4,
-                name: 'Бумага А4',
-                category: 'office',
-                price: 250,
-                quantity: 100,
-                description: 'Бумага А4, 80 г/м², 500 листов',
-                barcode: '1234567890126',
-                minQuantity: 20,
-                location: 'Стеллаж C-1',
-                supplier: 'ОфисМаркет',
-                createdAt: '2025-01-12T11:45:00Z',
-                updatedAt: '2025-01-12T11:45:00Z'
-            },
-            {
-                id: 5,
-                name: 'Отвертка крестовая',
-                category: 'tools',
-                price: 150,
-                quantity: 50,
-                description: 'Отвертка крестовая PH2, 150мм',
-                barcode: '1234567890127',
-                minQuantity: 15,
-                location: 'Стеллаж D-1',
-                supplier: 'ИнструментСтрой',
-                createdAt: '2025-01-08T16:20:00Z',
-                updatedAt: '2025-01-08T16:20:00Z'
-            }
-        ];
+        return [];
     }
 
     // Получение статистики
@@ -229,20 +109,23 @@ class WarehouseManager {
         const newItem = {
             id: this.getNextItemId(),
             name: itemData.itemName,
-            category: itemData.itemCategory,
+            category: itemData.itemCategory || 'uncategorized',
             price: parseFloat(itemData.itemPrice),
             quantity: parseInt(itemData.itemQuantity),
             description: itemData.itemDescription || '',
             barcode: itemData.itemBarcode || '',
             minQuantity: parseInt(itemData.itemQuantity) * 0.2, // 20% от начального количества
-            location: 'Новый стеллаж',
-            supplier: '',
+            location: itemData.itemLocation || 'Новый стеллаж',
+            supplier: itemData.itemSupplier || '',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
         this.items.push(newItem);
         this.saveItems();
+
+        // Обновляем количество товаров в категории
+        this.updateCategoryItemCounts();
 
         // Создаем операцию прихода для новой позиции
         await this.createOperation({
@@ -269,6 +152,10 @@ class WarehouseManager {
         };
 
         this.saveItems();
+        
+        // Обновляем количество товаров в категории
+        this.updateCategoryItemCounts();
+        
         return this.items[itemIndex];
     }
 
@@ -281,6 +168,10 @@ class WarehouseManager {
 
         this.items.splice(itemIndex, 1);
         this.saveItems();
+        
+        // Обновляем количество товаров в категории
+        this.updateCategoryItemCounts();
+        
         return true;
     }
 
@@ -298,6 +189,9 @@ class WarehouseManager {
         item.quantity += quantity;
         item.updatedAt = new Date().toISOString();
         this.saveItems();
+        
+        // Обновляем количество товаров в категории
+        this.updateCategoryItemCounts();
 
         // Создаем операцию
         const operation = await this.createOperation({
@@ -330,6 +224,9 @@ class WarehouseManager {
         item.quantity -= quantity;
         item.updatedAt = new Date().toISOString();
         this.saveItems();
+        
+        // Обновляем количество товаров в категории
+        this.updateCategoryItemCounts();
 
         // Создаем операцию
         const operation = await this.createOperation({

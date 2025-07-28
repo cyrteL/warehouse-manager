@@ -350,13 +350,22 @@ class CategoryManager {
             $('#currentUserInfo').text(user.name);
             $('#loginLink').hide();
             $('#profileDropdown').show();
-            $('#adminDropdown').show();
+            
+            // Показываем админ панель только для администраторов
+            if (auth.hasRole('admin')) {
+                $('#adminDropdown').show();
+            } else {
+                $('#adminDropdown').hide();
+            }
         } else {
             $('#currentUserInfo').text('Гость');
             $('#loginLink').show();
             $('#profileDropdown').hide();
             $('#adminDropdown').hide();
         }
+        
+        // Обновляем права доступа для элементов интерфейса
+        auth.updateButtonPermissions();
     }
 
     // Загрузка категорий в выпадающее меню
@@ -371,20 +380,59 @@ class CategoryManager {
             // Добавляем активные категории
             categories.forEach(category => {
                 if (category.active) {
+                    const isEmpty = category.itemCount === 0;
                     const categoryLink = `
                         <li>
-                            <a class="dropdown-item" href="../catalog.html?category=${category.id}" title="${category.description || ''}">
-                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
-                                ${category.name}
+                            <a class="dropdown-item ${isEmpty ? 'empty-category' : ''}" href="../catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <div class="category-info">
+                                    <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                    <span>${category.name}</span>
+                                </div>
+                                <span class="category-count">${category.itemCount || 0}</span>
                             </a>
                         </li>
                     `;
                     dropdown.append(categoryLink);
                 }
             });
+            
+            // Инициализируем hover-функциональность
+            this.initHoverDropdown();
         } catch (error) {
             console.error('Ошибка загрузки категорий в выпадающее меню:', error);
         }
+    }
+    
+    // Инициализация hover-функциональности для выпадающего меню
+    initHoverDropdown() {
+        const $dropdown = $('.nav-item.dropdown');
+        const $dropdownMenu = $dropdown.find('.dropdown-menu');
+        let hoverTimeout;
+        
+        // Показываем меню при наведении
+        $dropdown.on('mouseenter', function() {
+            clearTimeout(hoverTimeout);
+            $(this).find('.dropdown-menu').addClass('show');
+        });
+        
+        // Скрываем меню при уходе мыши
+        $dropdown.on('mouseleave', function() {
+            const $menu = $(this).find('.dropdown-menu');
+            hoverTimeout = setTimeout(() => {
+                $menu.removeClass('show');
+            }, 150); // Небольшая задержка для плавности
+        });
+        
+        // Предотвращаем скрытие при наведении на само меню
+        $dropdownMenu.on('mouseenter', function() {
+            clearTimeout(hoverTimeout);
+        });
+        
+        $dropdownMenu.on('mouseleave', function() {
+            hoverTimeout = setTimeout(() => {
+                $(this).removeClass('show');
+            }, 150);
+        });
     }
 }
 

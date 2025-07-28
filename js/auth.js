@@ -175,24 +175,108 @@ class AuthSystem {
         }
     }
 
-    // Обновление прав доступа для кнопок
+    // Обновление прав доступа для кнопок и элементов интерфейса
     updateButtonPermissions() {
-        // Кнопки, доступные только администраторам
-        const adminButtons = [
+        // Элементы, доступные только администраторам
+        const adminElements = [
             '#addItemBtn',
-            '#editItemBtn',
+            '#editItemBtn', 
             '#deleteItemBtn',
-            '#manageUsersBtn'
+            '#manageUsersBtn',
+            '.admin-only',
+            '[data-role="admin"]'
         ];
 
-        adminButtons.forEach(buttonId => {
+        // Элементы, доступные администраторам и менеджерам
+        const managerElements = [
+            '.manager-or-admin',
+            '[data-role="manager"]',
+            '#addCategoryBtn',
+            '#editCategoryBtn'
+        ];
+
+        // Элементы, доступные всем авторизованным пользователям
+        const authenticatedElements = [
+            '.authenticated-only',
+            '[data-role="authenticated"]',
+            '#exportBtn',
+            '#searchBtn'
+        ];
+
+        // Скрываем/показываем элементы для администраторов
+        adminElements.forEach(selector => {
+            const elements = $(selector);
+            elements.each((index, element) => {
+                const $element = $(element);
+                if (this.hasRole('admin')) {
+                    $element.show();
+                    $element.prop('disabled', false);
+                } else {
+                    $element.hide();
+                    $element.prop('disabled', true);
+                }
+            });
+        });
+
+        // Скрываем/показываем элементы для менеджеров и администраторов
+        managerElements.forEach(selector => {
+            const elements = $(selector);
+            elements.each((index, element) => {
+                const $element = $(element);
+                if (this.hasRole('admin') || this.hasRole('manager')) {
+                    $element.show();
+                    $element.prop('disabled', false);
+                } else {
+                    $element.hide();
+                    $element.prop('disabled', true);
+                }
+            });
+        });
+
+        // Скрываем/показываем элементы для авторизованных пользователей
+        authenticatedElements.forEach(selector => {
+            const elements = $(selector);
+            elements.each((index, element) => {
+                const $element = $(element);
+                if (this.isUserAuthenticated()) {
+                    $element.show();
+                    $element.prop('disabled', false);
+                } else {
+                    $element.hide();
+                    $element.prop('disabled', true);
+                }
+            });
+        });
+
+        // Специальная обработка для кнопок с подсказками
+        this.updateButtonTooltips();
+    }
+
+    // Обновление подсказок для кнопок
+    updateButtonTooltips() {
+        // Кнопки с подсказками о правах доступа
+        const buttonPermissions = {
+            '#addItemBtn': { roles: ['admin', 'manager'], message: 'Требуются права администратора или менеджера' },
+            '#editItemBtn': { roles: ['admin', 'manager'], message: 'Требуются права администратора или менеджера' },
+            '#deleteItemBtn': { roles: ['admin'], message: 'Требуются права администратора' },
+            '#addCategoryBtn': { roles: ['admin', 'manager'], message: 'Требуются права администратора или менеджера' },
+            '#editCategoryBtn': { roles: ['admin', 'manager'], message: 'Требуются права администратора или менеджера' },
+            '#deleteCategoryBtn': { roles: ['admin'], message: 'Требуются права администратора' },
+            '#exportBtn': { roles: ['admin', 'manager', 'operator', 'viewer'], message: 'Требуется авторизация' }
+        };
+
+        Object.keys(buttonPermissions).forEach(buttonId => {
             const button = $(buttonId);
             if (button.length) {
-                if (this.hasRole('admin')) {
+                const permission = buttonPermissions[buttonId];
+                const hasAccess = permission.roles.some(role => this.hasRole(role));
+                
+                if (hasAccess) {
                     button.prop('disabled', false);
+                    button.removeAttr('title');
                 } else {
                     button.prop('disabled', true);
-                    button.attr('title', 'Требуются права администратора');
+                    button.attr('title', permission.message);
                 }
             }
         });

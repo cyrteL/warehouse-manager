@@ -117,11 +117,11 @@
                         <p class="text-muted mb-0">Управление позициями склада</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-outline-primary" id="exportBtn">
+                        <button class="btn btn-outline-primary" id="exportBtn" data-role="authenticated">
                             <i class="fas fa-download me-1"></i>Экспорт
                         </button>
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal" id="addItemBtn" 
-                                style="display: none;" title="Требуются права администратора или менеджера">
+                                data-role="manager" style="display: none;" title="Требуются права администратора или менеджера">
                             <i class="fas fa-plus me-1"></i>Добавить позицию
                         </button>
                     </div>

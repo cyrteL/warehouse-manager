@@ -571,8 +571,8 @@ footer {
 
 /* Стили для выпадающего меню категорий */
 #catalogCategoriesDropdown {
-    min-width: 250px;
-    max-height: 400px;
+    min-width: 280px;
+    max-height: 500px;
     overflow-y: auto;
     border: none;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -587,6 +587,7 @@ footer {
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
 }
 
@@ -594,6 +595,28 @@ footer {
     background-color: var(--primary-color);
     color: white;
     transform: translateX(2px);
+}
+
+#catalogCategoriesDropdown .dropdown-item .category-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+#catalogCategoriesDropdown .dropdown-item .category-count {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: inherit;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 24px;
+    text-align: center;
+}
+
+#catalogCategoriesDropdown .dropdown-item:hover .category-count {
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 #catalogCategoriesDropdown .dropdown-item i {
@@ -604,6 +627,16 @@ footer {
 #catalogCategoriesDropdown .dropdown-divider {
     margin: 0.5rem 1rem;
     border-color: #e9ecef;
+}
+
+/* Стили для пустых категорий */
+#catalogCategoriesDropdown .dropdown-item.empty-category {
+    opacity: 0.6;
+}
+
+#catalogCategoriesDropdown .dropdown-item.empty-category .category-count {
+    background-color: #dc3545;
+    color: white;
 }
 
 /* Анимация появления выпадающего меню */
@@ -620,4 +653,18 @@ footer {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Hover dropdown functionality */
+.nav-item.dropdown:hover .dropdown-menu {
+    display: block !important;
+}
+
+.nav-item.dropdown:hover .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Smooth transition for dropdown arrow */
+.dropdown-toggle::after {
+    transition: transform 0.2s ease;
 } 
