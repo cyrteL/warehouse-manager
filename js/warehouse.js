@@ -7,7 +7,7 @@ class WarehouseManager {
         this.categories = this.loadCategories();
     }
 
-    // Загрузка товаров из localStorage
+            // Загрузка позиций из localStorage
     loadItems() {
         const items = localStorage.getItem('warehouse_items');
         return items ? JSON.parse(items) : this.getDefaultItems();
@@ -21,14 +21,86 @@ class WarehouseManager {
 
     // Загрузка категорий
     loadCategories() {
+        const categories = localStorage.getItem('warehouse_categories');
+        if (categories) {
+            this.categories = JSON.parse(categories);
+        } else {
+            // Загружаем категории по умолчанию
+            this.categories = this.getDefaultCategories();
+            this.saveCategories();
+        }
+        
+        // Обновляем количество позиций в каждой категории
+        this.updateCategoryItemCounts();
+    }
+
+    // Получение категорий по умолчанию
+    getDefaultCategories() {
         return [
-            { id: 'electronics', name: 'Электроника', icon: 'fas fa-laptop' },
-            { id: 'clothing', name: 'Одежда', icon: 'fas fa-tshirt' },
-            { id: 'tools', name: 'Инструменты', icon: 'fas fa-tools' },
-            { id: 'office', name: 'Офисные принадлежности', icon: 'fas fa-briefcase' },
-            { id: 'furniture', name: 'Мебель', icon: 'fas fa-couch' },
-            { id: 'books', name: 'Книги', icon: 'fas fa-book' }
+            {
+                id: 'electronics',
+                name: 'Электроника',
+                description: 'Электронные компоненты и устройства',
+                icon: 'fas fa-microchip',
+                color: '#2c5aa0',
+                active: true,
+                itemCount: 0,
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'components',
+                name: 'Компоненты',
+                description: 'Радиодетали и электронные компоненты',
+                icon: 'fas fa-cogs',
+                color: '#28a745',
+                active: true,
+                itemCount: 0,
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'tools',
+                name: 'Инструменты',
+                description: 'Ручной и электроинструмент',
+                icon: 'fas fa-tools',
+                color: '#ffc107',
+                active: true,
+                itemCount: 0,
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'office',
+                name: 'Офисные принадлежности',
+                description: 'Канцелярские товары и офисное оборудование',
+                icon: 'fas fa-briefcase',
+                color: '#6c757d',
+                active: true,
+                itemCount: 0,
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'furniture',
+                name: 'Мебель',
+                description: 'Офисная мебель и оборудование',
+                icon: 'fas fa-chair',
+                color: '#8b4513',
+                active: true,
+                itemCount: 0,
+                createdAt: new Date().toISOString()
+            }
         ];
+    }
+
+    // Сохранение категорий
+    saveCategories() {
+        localStorage.setItem('warehouse_categories', JSON.stringify(this.categories));
+    }
+
+    // Обновление количества позиций в категориях
+    updateCategoryItemCounts() {
+        this.categories.forEach(category => {
+            category.itemCount = this.items.filter(item => item.category === category.id).length;
+        });
+        this.saveCategories();
     }
 
     // Сохранение данных в localStorage
@@ -40,7 +112,7 @@ class WarehouseManager {
         localStorage.setItem('warehouse_operations', JSON.stringify(this.operations));
     }
 
-    // Получение товаров по умолчанию
+            // Получение позиций по умолчанию
     getDefaultItems() {
         return [
             {
@@ -54,8 +126,8 @@ class WarehouseManager {
                 minQuantity: 5,
                 location: 'Стеллаж A-1',
                 supplier: 'Dell Inc.',
-                createdAt: '2024-01-15T10:00:00Z',
-                updatedAt: '2024-01-15T10:00:00Z'
+                createdAt: '2025-01-15T10:00:00Z',
+                updatedAt: '2025-01-15T10:00:00Z'
             },
             {
                 id: 2,
@@ -68,13 +140,13 @@ class WarehouseManager {
                 minQuantity: 3,
                 location: 'Стеллаж A-2',
                 supplier: 'HP Inc.',
-                createdAt: '2024-01-10T14:30:00Z',
-                updatedAt: '2024-01-10T14:30:00Z'
+                createdAt: '2025-01-10T14:30:00Z',
+                updatedAt: '2025-01-10T14:30:00Z'
             },
             {
                 id: 3,
                 name: 'Офисный стул',
-                category: 'furniture',
+                category: 'office',
                 price: 3500,
                 quantity: 25,
                 description: 'Офисный стул с подлокотниками, черный',
@@ -82,8 +154,8 @@ class WarehouseManager {
                 minQuantity: 10,
                 location: 'Стеллаж B-1',
                 supplier: 'МебельСтрой',
-                createdAt: '2024-01-05T09:15:00Z',
-                updatedAt: '2024-01-05T09:15:00Z'
+                createdAt: '2025-01-05T09:15:00Z',
+                updatedAt: '2025-01-05T09:15:00Z'
             },
             {
                 id: 4,
@@ -96,8 +168,8 @@ class WarehouseManager {
                 minQuantity: 20,
                 location: 'Стеллаж C-1',
                 supplier: 'ОфисМаркет',
-                createdAt: '2024-01-12T11:45:00Z',
-                updatedAt: '2024-01-12T11:45:00Z'
+                createdAt: '2025-01-12T11:45:00Z',
+                updatedAt: '2025-01-12T11:45:00Z'
             },
             {
                 id: 5,
@@ -110,14 +182,14 @@ class WarehouseManager {
                 minQuantity: 15,
                 location: 'Стеллаж D-1',
                 supplier: 'ИнструментСтрой',
-                createdAt: '2024-01-08T16:20:00Z',
-                updatedAt: '2024-01-08T16:20:00Z'
+                createdAt: '2025-01-08T16:20:00Z',
+                updatedAt: '2025-01-08T16:20:00Z'
             }
         ];
     }
 
     // Получение статистики
-    async getStatistics() {
+    getStatistics() {
         const today = new Date().toISOString().split('T')[0];
         
         const totalItems = this.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -137,17 +209,22 @@ class WarehouseManager {
         };
     }
 
-    // Получение всех товаров
+                // Получение всех позиций
     async getAllItems() {
         return this.items;
     }
 
-    // Получение товара по ID
+    // Синхронное получение всех позиций
+    getAllItemsSync() {
+        return this.items;
+    }
+
+    // Получение позиции по ID
     async getItemById(id) {
         return this.items.find(item => item.id === parseInt(id));
     }
 
-    // Добавление нового товара
+    // Добавление новой позиции
     async addItem(itemData) {
         const newItem = {
             id: this.getNextItemId(),
@@ -167,22 +244,22 @@ class WarehouseManager {
         this.items.push(newItem);
         this.saveItems();
 
-        // Создаем операцию прихода для нового товара
+        // Создаем операцию прихода для новой позиции
         await this.createOperation({
             type: 'incoming',
             itemId: newItem.id,
             quantity: newItem.quantity,
-            notes: 'Добавление нового товара'
+            notes: 'Добавление новой позиции'
         });
 
         return newItem;
     }
 
-    // Обновление товара
+    // Обновление позиции
     async updateItem(id, itemData) {
         const itemIndex = this.items.findIndex(item => item.id === parseInt(id));
         if (itemIndex === -1) {
-            throw new Error('Товар не найден');
+            throw new Error('Позиция не найдена');
         }
 
         this.items[itemIndex] = {
@@ -195,11 +272,11 @@ class WarehouseManager {
         return this.items[itemIndex];
     }
 
-    // Удаление товара
+    // Удаление позиции
     async deleteItem(id) {
         const itemIndex = this.items.findIndex(item => item.id === parseInt(id));
         if (itemIndex === -1) {
-            throw new Error('Товар не найден');
+            throw new Error('Позиция не найдена');
         }
 
         this.items.splice(itemIndex, 1);
@@ -214,10 +291,10 @@ class WarehouseManager {
         
         const item = await this.getItemById(itemId);
         if (!item) {
-            throw new Error('Товар не найден');
+            throw new Error('Позиция не найдена');
         }
 
-        // Обновляем количество товара
+        // Обновляем количество позиции
         item.quantity += quantity;
         item.updatedAt = new Date().toISOString();
         this.saveItems();
@@ -241,15 +318,15 @@ class WarehouseManager {
         
         const item = await this.getItemById(itemId);
         if (!item) {
-            throw new Error('Товар не найден');
+            throw new Error('Позиция не найдена');
         }
 
-        // Проверяем достаточность товара
+        // Проверяем достаточность позиции
         if (item.quantity < quantity) {
-            throw new Error(`Недостаточно товара. Доступно: ${item.quantity} шт.`);
+            throw new Error(`Недостаточно позиций. Доступно: ${item.quantity} шт.`);
         }
 
-        // Обновляем количество товара
+        // Обновляем количество позиции
         item.quantity -= quantity;
         item.updatedAt = new Date().toISOString();
         this.saveItems();
@@ -401,16 +478,61 @@ class WarehouseManager {
         return this.categories;
     }
 
+    // Получение категории по ID
+    async getCategoryById(id) {
+        return this.categories.find(cat => cat.id === id);
+    }
+
     // Добавление категории
     async addCategory(categoryData) {
         const newCategory = {
-            id: categoryData.id || this.generateCategoryId(),
-            name: categoryData.name,
-            icon: categoryData.icon || 'fas fa-box'
+            id: this.generateCategoryId(),
+            ...categoryData,
+            itemCount: 0,
+            createdAt: new Date().toISOString()
         };
 
         this.categories.push(newCategory);
+        this.saveCategories();
         return newCategory;
+    }
+
+    // Обновление категории
+    async updateCategory(id, categoryData) {
+        const categoryIndex = this.categories.findIndex(cat => cat.id === id);
+        if (categoryIndex === -1) {
+            throw new Error('Категория не найдена');
+        }
+
+        this.categories[categoryIndex] = {
+            ...this.categories[categoryIndex],
+            ...categoryData,
+            updatedAt: new Date().toISOString()
+        };
+
+        this.saveCategories();
+        return this.categories[categoryIndex];
+    }
+
+    // Удаление категории
+    async deleteCategory(id) {
+        const categoryIndex = this.categories.findIndex(cat => cat.id === id);
+        if (categoryIndex === -1) {
+            throw new Error('Категория не найдена');
+        }
+
+        // Удаляем все позиции этой категории
+        this.items = this.items.filter(item => item.category !== id);
+        this.saveItems();
+
+        // Удаляем категорию
+        this.categories.splice(categoryIndex, 1);
+        this.saveCategories();
+
+        // Обновляем количество позиций в остальных категориях
+        this.updateCategoryItemCounts();
+
+        return true;
     }
 
     // Генерация следующего ID для товара

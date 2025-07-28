@@ -13,10 +13,39 @@ class HistoryManager {
     }
 
     init() {
-        $(document).ready(() => {
-            this.loadHistory();
-            this.bindEvents();
-            this.initializeFilters();
+        $(document).ready(async () => {
+            try {
+                // Проверяем авторизацию
+                if (!auth.isUserAuthenticated()) {
+                    console.log('Пользователь не авторизован, перенаправление на login.html');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('Инициализация истории для пользователя:', auth.getCurrentUser()?.name);
+
+                // Загружаем историю операций
+                await this.loadHistory();
+                
+                // Загружаем категории в навигацию
+                await this.loadCategoriesNav();
+                
+                // Загружаем категории в выпадающее меню
+                await this.loadCategoriesDropdown();
+                
+                // Обновляем информацию о пользователе
+                this.updateUserInfo();
+                
+                // Привязываем события
+                this.bindEvents();
+                
+                // Инициализируем фильтры
+                this.initializeFilters();
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                auth.showNotification('Ошибка загрузки данных', 'danger');
+            }
         });
     }
 
@@ -32,6 +61,13 @@ class HistoryManager {
         $('#exportBtn').on('click', () => this.exportOperations());
         $('#generateReportBtn').on('click', () => this.generateReport());
         
+        // Обработчик выхода
+        $('#logoutBtn').on('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+            window.location.href = 'login.html';
+        });
+        
         // Установка дат по умолчанию
         this.setDefaultDates();
     }
@@ -44,7 +80,7 @@ class HistoryManager {
             // Загружаем операции
             this.operations = await this.warehouse.getOperations();
             
-            // Загружаем товары для фильтра
+            // Загружаем позиции для фильтра
             const items = await this.warehouse.getAllItems();
             this.populateItemFilter(items);
             
@@ -89,7 +125,7 @@ class HistoryManager {
         $('#reportEndDate').val(today.toISOString().split('T')[0]);
     }
 
-    // Заполнение фильтра товаров
+            // Заполнение фильтра позиций
     populateItemFilter(items) {
         const itemFilter = $('#itemFilter');
         const reportItem = $('#reportItem');
@@ -147,7 +183,7 @@ class HistoryManager {
                 }
             }
 
-            // Фильтр по товару
+            // Фильтр по позиции
             if (this.filters.itemId && operation.itemId !== parseInt(this.filters.itemId)) {
                 return false;
             }
@@ -405,10 +441,10 @@ class HistoryManager {
                     </table>
                 </div>
                 <div class="col-md-6">
-                    <h6>Детали товара</h6>
+                                            <h6>Детали позиции</h6>
                     <table class="table table-sm">
                         <tr>
-                            <td><strong>Товар:</strong></td>
+                                                          <td><strong>Позиция:</strong></td>
                             <td>${operation.itemName}</td>
                         </tr>
                         <tr>
@@ -613,6 +649,78 @@ class HistoryManager {
     // Скрыть индикатор загрузки
     hideLoading() {
         // Загрузка завершается в renderOperations()
+    }
+
+    // Обновление информации о пользователе
+    updateUserInfo() {
+        const user = auth.getCurrentUser();
+        if (user) {
+            $('#currentUserInfo').text(user.name);
+            $('#loginLink').hide();
+            $('#profileDropdown').show();
+            $('#adminDropdown').show();
+        } else {
+            $('#currentUserInfo').text('Гость');
+            $('#loginLink').show();
+            $('#profileDropdown').hide();
+            $('#adminDropdown').hide();
+        }
+    }
+
+    // Загрузка категорий в навигацию
+    async loadCategoriesNav() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const categoriesNav = $('#categoriesNav');
+            
+            // Очищаем существующие категории (кроме "Главная")
+            categoriesNav.find('li:not(:first-child)').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li class="nav-item">
+                            <a class="nav-link" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    categoriesNav.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    }
+
+    // Загрузка категорий в выпадающее меню
+    async loadCategoriesDropdown() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const dropdown = $('#catalogCategoriesDropdown');
+            
+            // Очищаем существующие категории (кроме "Все позиции" и разделителя)
+            dropdown.find('li:not(:first-child):not(:nth-child(2))').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li>
+                            <a class="dropdown-item" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    dropdown.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий в выпадающее меню:', error);
+        }
     }
 }
 

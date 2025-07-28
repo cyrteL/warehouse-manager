@@ -1,17 +1,20 @@
 /* Основные стили для системы управления складом */
 
 :root {
-    --primary-color: #0d6efd;
+    --primary-color: #2c5aa0;
     --secondary-color: #6c757d;
-    --success-color: #198754;
+    --success-color: #28a745;
     --warning-color: #ffc107;
     --danger-color: #dc3545;
-    --info-color: #0dcaf0;
+    --info-color: #17a2b8;
     --light-color: #f8f9fa;
-    --dark-color: #212529;
-    --border-radius: 0.375rem;
-    --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    --transition: all 0.15s ease-in-out;
+    --dark-color: #343a40;
+    --border-radius: 0.25rem;
+    --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --transition: all 0.2s ease-in-out;
+    --header-bg: #1e3a5f;
+    --sidebar-bg: #f8f9fa;
+    --card-border: #e9ecef;
 }
 
 /* Общие стили */
@@ -21,40 +24,124 @@ body {
     line-height: 1.6;
 }
 
-/* Навигация */
+
+
+/* Главная навигация */
+.navbar {
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--card-border);
+    padding: 1rem 0;
+}
+
 .navbar-brand {
     font-weight: 700;
     font-size: 1.5rem;
+    color: var(--primary-color) !important;
+}
+
+.navbar-search .input-group {
+    border-radius: 25px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-search .form-control {
+    border: none;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+.navbar-search .btn {
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0 25px 25px 0;
 }
 
 .navbar-nav .nav-link {
     font-weight: 500;
     transition: var(--transition);
+    padding: 0.5rem 1rem !important;
+    border-radius: var(--border-radius);
+    margin: 0 0.25rem;
+    color: var(--dark-color) !important;
 }
 
 .navbar-nav .nav-link:hover {
-    color: rgba(255, 255, 255, 0.8) !important;
+    background-color: rgba(44, 90, 160, 0.1);
+    color: var(--primary-color) !important;
+}
+
+.navbar-nav .nav-link.active {
+    color: var(--primary-color) !important;
+    background-color: rgba(44, 90, 160, 0.15);
+    font-weight: 600;
+}
+
+/* Панель категорий */
+.categories-bar {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid var(--card-border);
+    padding: 0.5rem 0;
+}
+
+.categories-nav {
+    gap: 0.5rem;
+}
+
+.categories-nav .nav-link {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: var(--transition);
+    color: var(--dark-color);
+    border: 1px solid transparent;
+}
+
+.categories-nav .nav-link:hover {
+    background-color: rgba(44, 90, 160, 0.1);
+    border-color: rgba(44, 90, 160, 0.2);
+    color: var(--primary-color);
+}
+
+.categories-nav .nav-link.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+    color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(44, 90, 160, 0.3);
 }
 
 /* Карточки быстрых действий */
 .quick-action-card {
     transition: var(--transition);
-    border: 1px solid rgba(0, 0, 0, 0.125);
+    border: 1px solid var(--card-border);
     box-shadow: var(--box-shadow);
+    background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+    border-radius: 12px;
 }
 
 .quick-action-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-color);
 }
 
 .quick-action-card .card-body {
     padding: 2rem 1.5rem;
 }
 
+.quick-action-card i {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 /* Градиентный фон для приветственного блока */
 .bg-gradient-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+    background: linear-gradient(135deg, var(--header-bg) 0%, var(--primary-color) 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* Статистические карточки */
@@ -65,35 +152,56 @@ body {
     border: none;
     box-shadow: var(--box-shadow);
     transition: var(--transition);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card.bg-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%) !important;
+}
+
+.card.bg-success {
+    background: linear-gradient(135deg, var(--success-color) 0%, #1e7e34 100%) !important;
+}
+
+.card.bg-warning {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #e0a800 100%) !important;
+}
+
+.card.bg-info {
+    background: linear-gradient(135deg, var(--info-color) 0%, #138496 100%) !important;
 }
 
 .card.bg-primary:hover,
 .card.bg-success:hover,
 .card.bg-warning:hover,
 .card.bg-info:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* Таблицы */
 .table {
     background-color: white;
-    border-radius: var(--border-radius);
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: var(--box-shadow);
+    border: 1px solid var(--card-border);
 }
 
 .table thead th {
-    background-color: var(--light-color);
-    border-bottom: 2px solid #dee2e6;
+    background: linear-gradient(135deg, var(--light-color) 0%, #e9ecef 100%);
+    border-bottom: 2px solid var(--primary-color);
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.875rem;
     letter-spacing: 0.5px;
+    color: var(--dark-color);
 }
 
 .table tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.05);
+    background-color: rgba(44, 90, 160, 0.05);
+    transition: var(--transition);
 }
 
 /* Модальные окна */
@@ -115,15 +223,23 @@ body {
 /* Формы */
 .form-control,
 .form-select {
-    border-radius: var(--border-radius);
+    border-radius: 8px;
     border: 1px solid #ced4da;
     transition: var(--transition);
+    padding: 0.75rem 1rem;
 }
 
 .form-control:focus,
 .form-select:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
+    background-color: #fff;
+}
+
+.input-group-text {
+    border-radius: 8px 0 0 8px;
+    border: 1px solid #ced4da;
+    background: linear-gradient(135deg, var(--light-color) 0%, #e9ecef 100%);
 }
 
 .form-label {
@@ -134,15 +250,26 @@ body {
 
 /* Кнопки */
 .btn {
-    border-radius: var(--border-radius);
+    border-radius: 8px;
     font-weight: 500;
     transition: var(--transition);
     text-transform: none;
+    border: none;
+    padding: 0.5rem 1.25rem;
 }
 
 .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1e3a5f 0%, var(--primary-color) 100%);
 }
 
 .btn-primary {
@@ -439,5 +566,58 @@ footer {
     .card {
         border: 1px solid #000 !important;
         box-shadow: none !important;
+    }
+}
+
+/* Стили для выпадающего меню категорий */
+#catalogCategoriesDropdown {
+    min-width: 250px;
+    max-height: 400px;
+    overflow-y: auto;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 0.5rem 0;
+}
+
+#catalogCategoriesDropdown .dropdown-item {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin: 0 0.5rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#catalogCategoriesDropdown .dropdown-item:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateX(2px);
+}
+
+#catalogCategoriesDropdown .dropdown-item i {
+    width: 16px;
+    text-align: center;
+}
+
+#catalogCategoriesDropdown .dropdown-divider {
+    margin: 0.5rem 1rem;
+    border-color: #e9ecef;
+}
+
+/* Анимация появления выпадающего меню */
+.dropdown-menu.show {
+    animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 } 

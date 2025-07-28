@@ -1,4 +1,4 @@
-// JavaScript для страницы каталога товаров
+// JavaScript для страницы каталога позиций
 
 class CatalogManager {
     constructor() {
@@ -14,10 +14,45 @@ class CatalogManager {
     }
 
     init() {
-        $(document).ready(() => {
-            this.loadCatalog();
-            this.bindEvents();
-            this.initializeFilters();
+        $(document).ready(async () => {
+            try {
+                // Проверяем авторизацию
+                if (!auth.isUserAuthenticated()) {
+                    console.log('Пользователь не авторизован, перенаправление на login.html');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('Инициализация каталога для пользователя:', auth.getCurrentUser()?.name);
+
+                // Загружаем каталог
+                await this.loadCatalog();
+                
+                // Загружаем категории в навигацию
+                await this.loadCategoriesNav();
+                
+                // Загружаем категории в выпадающее меню
+                await this.loadCategoriesDropdown();
+                
+                // Обновляем информацию о пользователе
+                this.updateUserInfo();
+                
+                // Привязываем события
+                this.bindEvents();
+                
+                // Инициализируем фильтры
+                this.initializeFilters();
+                
+                // Проверяем параметр категории в URL
+                this.handleCategoryFromUrl();
+                
+                // Обновляем права доступа
+                this.updatePermissions();
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                auth.showNotification('Ошибка загрузки данных', 'danger');
+            }
         });
     }
 
@@ -41,6 +76,13 @@ class CatalogManager {
 
         // Экспорт
         $('#exportBtn').on('click', () => this.exportCatalog());
+
+        // Обработчик выхода
+        $('#logoutBtn').on('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+            window.location.href = 'login.html';
+        });
     }
 
     // Загрузка каталога
@@ -48,12 +90,17 @@ class CatalogManager {
         try {
             this.showLoading();
             
-            // Загружаем товары
+            // Загружаем позиции
             this.currentItems = await this.warehouse.getAllItems();
             
             // Загружаем категории
             const categories = await this.warehouse.getCategories();
-            this.populateCategoryFilters(categories);
+            if (categories && categories.length > 0) {
+                this.populateCategoryFilters(categories);
+            } else {
+                console.warn('Категории не найдены');
+                auth.showNotification('Категории не загружены', 'warning');
+            }
             
             // Применяем фильтры и рендерим
             this.applyFilters();
@@ -83,6 +130,11 @@ class CatalogManager {
 
     // Заполнение фильтра категорий
     populateCategoryFilters(categories) {
+        if (!categories || categories.length === 0) {
+            console.warn('Нет категорий для отображения');
+            return;
+        }
+
         const categoryFilter = $('#categoryFilter');
         const addItemCategory = $('#itemCategory');
         const editItemCategory = $('#editItemCategory');
@@ -94,10 +146,12 @@ class CatalogManager {
         
         // Добавляем категории
         categories.forEach(category => {
-            const option = `<option value="${category.id}">${category.name}</option>`;
-            categoryFilter.append(option);
-            addItemCategory.append(option);
-            editItemCategory.append(option);
+            if (category && category.id && category.name) {
+                const option = `<option value="${category.id}">${category.name}</option>`;
+                categoryFilter.append(option);
+                addItemCategory.append(option);
+                editItemCategory.append(option);
+            }
         });
     }
 
@@ -125,7 +179,7 @@ class CatalogManager {
         this.filters.inStock = $('#inStockFilter').is(':checked');
         this.filters.lowStock = $('#lowStockFilter').is(':checked');
 
-        // Фильтруем товары
+        // Фильтруем позиции
         this.filteredItems = this.currentItems.filter(item => {
             // Поиск по названию, описанию и штрих-коду
             if (this.filters.search) {
@@ -191,7 +245,7 @@ class CatalogManager {
                 <div class="col-12">
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
-                        <h4>Товары не найдены</h4>
+                        <h4>Позиции не найдены</h4>
                         <p>Попробуйте изменить параметры поиска или фильтры</p>
                     </div>
                 </div>
@@ -205,7 +259,7 @@ class CatalogManager {
         const endIndex = startIndex + this.itemsPerPage;
         const pageItems = this.filteredItems.slice(startIndex, endIndex);
 
-        // Рендерим товары
+        // Рендерим позиции
         pageItems.forEach(item => {
             const itemHtml = this.currentView === 'grid' ? 
                 this.createGridItem(item) : this.createListItem(item);
@@ -216,7 +270,7 @@ class CatalogManager {
         this.renderPagination(totalPages);
     }
 
-    // Создание карточки товара (сетка)
+            // Создание карточки позиции (сетка)
     createGridItem(item) {
         const category = this.getCategoryInfo(item.category);
         const stockStatus = this.getStockStatus(item);
@@ -248,7 +302,7 @@ class CatalogManager {
                             <button class="btn btn-outline-primary btn-sm" onclick="catalogManager.viewItem(${item.id})">
                                 <i class="fas fa-eye me-1"></i>Просмотр
                             </button>
-                            ${auth.hasPermission('write') ? `
+                            ${(auth.hasRole('admin') || auth.hasRole('manager')) ? `
                                 <button class="btn btn-outline-warning btn-sm" onclick="catalogManager.editItem(${item.id})">
                                     <i class="fas fa-edit me-1"></i>Редактировать
                                 </button>
@@ -260,7 +314,7 @@ class CatalogManager {
         `;
     }
 
-    // Создание строки товара (список)
+            // Создание строки позиции (список)
     createListItem(item) {
         const category = this.getCategoryInfo(item.category);
         const stockStatus = this.getStockStatus(item);
@@ -300,12 +354,12 @@ class CatalogManager {
                                         <li><a class="dropdown-item" href="#" onclick="catalogManager.viewItem(${item.id})">
                                             <i class="fas fa-eye me-2"></i>Просмотр
                                         </a></li>
-                                        ${auth.hasPermission('write') ? `
+                                        ${(auth.hasRole('admin') || auth.hasRole('manager')) ? `
                                             <li><a class="dropdown-item" href="#" onclick="catalogManager.editItem(${item.id})">
                                                 <i class="fas fa-edit me-2"></i>Редактировать
                                             </a></li>
                                         ` : ''}
-                                        ${auth.hasPermission('delete') ? `
+                                        ${auth.hasRole('admin') ? `
                                             <li><hr class="dropdown-divider"></li>
                                             <li><a class="dropdown-item text-danger" href="#" onclick="catalogManager.deleteItem(${item.id})">
                                                 <i class="fas fa-trash me-2"></i>Удалить
@@ -370,10 +424,14 @@ class CatalogManager {
 
     // Обновление статистики
     updateStatistics() {
+        if (!this.filteredItems) {
+            this.filteredItems = [];
+        }
+
         const totalItems = this.filteredItems.length;
-        const inStockItems = this.filteredItems.filter(item => item.quantity > 0).length;
-        const lowStockItems = this.filteredItems.filter(item => item.quantity <= item.minQuantity).length;
-        const categories = [...new Set(this.filteredItems.map(item => item.category))].length;
+        const inStockItems = this.filteredItems.filter(item => item && item.quantity > 0).length;
+        const lowStockItems = this.filteredItems.filter(item => item && item.quantity <= (item.minQuantity || 0)).length;
+        const categories = [...new Set(this.filteredItems.filter(item => item && item.category).map(item => item.category))].length;
 
         $('#totalItemsCount').text(totalItems);
         $('#inStockCount').text(inStockItems);
@@ -383,17 +441,21 @@ class CatalogManager {
 
     // Получение информации о категории
     getCategoryInfo(categoryId) {
-        const categories = [
-            { id: 'electronics', name: 'Электроника', icon: 'fas fa-laptop' },
-            { id: 'clothing', name: 'Одежда', icon: 'fas fa-tshirt' },
-            { id: 'tools', name: 'Инструменты', icon: 'fas fa-tools' },
-            { id: 'office', name: 'Офисные принадлежности', icon: 'fas fa-briefcase' },
-            { id: 'furniture', name: 'Мебель', icon: 'fas fa-couch' },
-            { id: 'books', name: 'Книги', icon: 'fas fa-book' }
-        ];
+        if (!categoryId) {
+            return { id: 'unknown', name: 'Без категории', icon: 'fas fa-box' };
+        }
+
+        // Используем категории из warehouse
+        const category = this.warehouse.categories.find(cat => cat.id === categoryId);
+        if (category) {
+            return {
+                id: category.id,
+                name: category.name,
+                icon: category.icon || 'fas fa-box'
+            };
+        }
         
-        return categories.find(cat => cat.id === categoryId) || 
-               { id: 'unknown', name: 'Неизвестная категория', icon: 'fas fa-box' };
+        return { id: 'unknown', name: 'Неизвестная категория', icon: 'fas fa-box' };
     }
 
     // Получение статуса запаса
@@ -407,16 +469,16 @@ class CatalogManager {
         }
     }
 
-    // Просмотр товара
+    // Просмотр позиции
     viewItem(itemId) {
         const item = this.currentItems.find(i => i.id === itemId);
         if (!item) return;
 
         // Здесь можно открыть модальное окно с подробной информацией
-        auth.showNotification(`Просмотр товара: ${item.name}`, 'info');
+        auth.showNotification(`Просмотр позиции: ${item.name}`, 'info');
     }
 
-    // Редактирование товара
+    // Редактирование позиции
     async editItem(itemId) {
         const item = this.currentItems.find(i => i.id === itemId);
         if (!item) return;
@@ -467,19 +529,19 @@ class CatalogManager {
                 this.currentItems[itemIndex] = { ...this.currentItems[itemIndex], ...updateData };
             }
 
-            auth.showNotification('Товар успешно обновлен', 'success');
+            auth.showNotification('Позиция успешно обновлена', 'success');
             
             // Закрываем модальное окно и обновляем каталог
             $('#editItemModal').modal('hide');
             this.applyFilters();
             
         } catch (error) {
-            console.error('Ошибка при обновлении товара:', error);
-            auth.showNotification('Ошибка при обновлении товара', 'danger');
+            console.error('Ошибка при обновлении позиции:', error);
+            auth.showNotification('Ошибка при обновлении позиции', 'danger');
         }
     }
 
-    // Добавление нового товара
+            // Добавление новой позиции
     async addNewItem() {
         const formData = this.getFormData('#addItemForm');
         
@@ -493,7 +555,7 @@ class CatalogManager {
             // Добавляем в локальные данные
             this.currentItems.push(newItem);
             
-            auth.showNotification('Товар успешно добавлен', 'success');
+            auth.showNotification('Позиция успешно добавлена', 'success');
             
             // Закрываем модальное окно и обновляем каталог
             $('#addItemModal').modal('hide');
@@ -503,14 +565,14 @@ class CatalogManager {
             $('#addItemForm')[0].reset();
             
         } catch (error) {
-            console.error('Ошибка при добавлении товара:', error);
-            auth.showNotification('Ошибка при добавлении товара', 'danger');
+            console.error('Ошибка при добавлении позиции:', error);
+            auth.showNotification('Ошибка при добавлении позиции', 'danger');
         }
     }
 
-    // Удаление товара
+    // Удаление позиции
     async deleteItem(itemId) {
-        if (!confirm('Вы уверены, что хотите удалить этот товар?')) {
+        if (!confirm('Вы уверены, что хотите удалить эту позицию?')) {
             return;
         }
 
@@ -520,12 +582,12 @@ class CatalogManager {
             // Удаляем из локальных данных
             this.currentItems = this.currentItems.filter(i => i.id !== itemId);
             
-            auth.showNotification('Товар успешно удален', 'success');
+            auth.showNotification('Позиция успешно удалена', 'success');
             this.applyFilters();
             
         } catch (error) {
-            console.error('Ошибка при удалении товара:', error);
-            auth.showNotification('Ошибка при удалении товара', 'danger');
+            console.error('Ошибка при удалении позиции:', error);
+            auth.showNotification('Ошибка при удалении позиции', 'danger');
         }
     }
 
@@ -631,6 +693,126 @@ class CatalogManager {
     // Скрыть индикатор загрузки
     hideLoading() {
         // Загрузка завершается в renderCatalog()
+    }
+
+    // Обновление информации о пользователе
+    updateUserInfo() {
+        const user = auth.getCurrentUser();
+        console.log('Обновление информации о пользователе в каталоге:', user);
+        
+        if (user) {
+            // Обновляем имя пользователя в профиле
+            const profileToggle = $('#profileDropdown .dropdown-toggle');
+            if (profileToggle.length) {
+                profileToggle.html(`<i class="fas fa-user me-1"></i>${user.name}`);
+            }
+            
+            // Показываем профиль для всех авторизованных пользователей
+            $('#profileDropdown').show();
+            
+            // Показываем админ панель только для администраторов
+            if (auth.hasRole('admin')) {
+                $('#adminDropdown').show();
+                console.log('Показана панель администратора в каталоге');
+            } else {
+                $('#adminDropdown').hide();
+                console.log('Скрыта панель администратора в каталоге');
+            }
+        } else {
+            console.log('Пользователь не авторизован в каталоге');
+            $('#profileDropdown').hide();
+            $('#adminDropdown').hide();
+        }
+    }
+
+    // Загрузка категорий в навигацию
+    async loadCategoriesNav() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const categoriesNav = $('#categoriesNav');
+            
+            // Очищаем существующие категории (кроме "Главная")
+            categoriesNav.find('li:not(:first-child)').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li class="nav-item">
+                            <a class="nav-link" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    categoriesNav.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    }
+
+    // Обновление прав доступа
+    updatePermissions() {
+        const user = auth.getCurrentUser();
+        if (!user) return;
+
+        // Показываем кнопку добавления для администраторов и менеджеров
+        if (auth.hasRole('admin') || auth.hasRole('manager')) {
+            $('#addItemBtn').show();
+        } else {
+            $('#addItemBtn').hide();
+        }
+
+        // Показываем кнопку экспорта для всех авторизованных пользователей
+        $('#exportBtn').show();
+    }
+
+    // Загрузка категорий в выпадающее меню
+    async loadCategoriesDropdown() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const dropdown = $('#catalogCategoriesDropdown');
+            
+            // Очищаем существующие категории (кроме "Все позиции" и разделителя)
+            dropdown.find('li:not(:first-child):not(:nth-child(2))').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li>
+                            <a class="dropdown-item" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    dropdown.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий в выпадающее меню:', error);
+        }
+    }
+
+    // Обработка параметра категории из URL
+    handleCategoryFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const categoryParam = urlParams.get('category');
+        
+        if (categoryParam) {
+            // Устанавливаем фильтр категории
+            $('#categoryFilter').val(categoryParam);
+            
+            // Применяем фильтры
+            this.applyFilters();
+            
+            // Показываем уведомление о примененном фильтре
+            const categoryInfo = this.getCategoryInfo(categoryParam);
+            auth.showNotification(`Отфильтровано по категории: ${categoryInfo.name}`, 'info');
+        }
     }
 }
 

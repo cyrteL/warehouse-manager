@@ -8,10 +8,44 @@ class MainApp {
 
     init() {
         // Инициализация после загрузки DOM
-        $(document).ready(() => {
-            this.loadDashboardData();
-            this.bindEvents();
-            this.initializeModals();
+        $(document).ready(async () => {
+            try {
+                // Проверяем авторизацию
+                if (!auth.isUserAuthenticated()) {
+                    console.log('Пользователь не авторизован, перенаправление на login.html');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('Инициализация главной страницы для пользователя:', auth.getCurrentUser()?.name);
+
+                // Загружаем данные дашборда
+                await this.loadDashboardData();
+                
+                // Загружаем категории в навигацию
+                await this.loadCategoriesNav();
+                
+                // Загружаем категории в выпадающее меню
+                await this.loadCategoriesDropdown();
+                
+                // Обновляем информацию о пользователе
+                this.updateUserInfo();
+                
+                // Принудительно обновляем еще раз через небольшую задержку
+                setTimeout(() => {
+                    this.updateUserInfo();
+                }, 500);
+                
+                // Привязываем события
+                this.bindEvents();
+                
+                // Инициализируем модальные окна
+                this.initializeModals();
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                auth.showNotification('Ошибка загрузки данных', 'danger');
+            }
         });
     }
 
@@ -29,6 +63,13 @@ class MainApp {
 
         // Обработчики для экспорта
         $('#exportBtn').on('click', () => this.exportData());
+
+        // Обработчик выхода
+        $('#logoutBtn').on('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+            window.location.href = 'login.html';
+        });
     }
 
     // Загрузка данных для дашборда
@@ -38,14 +79,14 @@ class MainApp {
             this.showLoading();
 
             // Загружаем статистику
-            const stats = await this.warehouse.getStatistics();
+            const stats = this.warehouse.getStatistics();
             this.updateStatistics(stats);
 
             // Загружаем последние операции
             const operations = await this.warehouse.getRecentOperations(10);
             this.updateOperationsTable(operations);
 
-            // Загружаем товары для модальных окон
+            // Загружаем позиции для модальных окон
             const items = await this.warehouse.getAllItems();
             this.populateItemSelects(items);
 
@@ -146,7 +187,7 @@ class MainApp {
         });
     }
 
-    // Заполнение селектов товаров
+            // Заполнение селектов позиций
     populateItemSelects(items) {
         const selects = ['#incomingItem', '#outgoingItem'];
         
@@ -160,7 +201,7 @@ class MainApp {
         });
     }
 
-    // Добавление нового товара
+            // Добавление новой позиции
     async addNewItem() {
         const formData = this.getFormData('#addItemForm');
         
@@ -170,7 +211,7 @@ class MainApp {
 
         try {
             const newItem = await this.warehouse.addItem(formData);
-            auth.showNotification('Товар успешно добавлен', 'success');
+            auth.showNotification('Позиция успешно добавлена', 'success');
             
             // Закрываем модальное окно
             $('#addItemModal').modal('hide');
@@ -182,8 +223,8 @@ class MainApp {
             $('#addItemForm')[0].reset();
             
         } catch (error) {
-            console.error('Ошибка при добавлении товара:', error);
-            auth.showNotification('Ошибка при добавлении товара', 'danger');
+            console.error('Ошибка при добавлении позиции:', error);
+            auth.showNotification('Ошибка при добавлении позиции', 'danger');
         }
     }
 
@@ -423,6 +464,92 @@ class MainApp {
     // Скрыть индикатор загрузки
     hideLoading() {
         $('#loadingOverlay').remove();
+    }
+
+    // Обновление информации о пользователе
+    updateUserInfo() {
+        const user = auth.getCurrentUser();
+        console.log('Обновление информации о пользователе:', user);
+        
+        if (user) {
+            // Обновляем имя пользователя в профиле
+            const profileToggle = $('#profileDropdown .dropdown-toggle');
+            if (profileToggle.length) {
+                profileToggle.html(`<i class="fas fa-user me-1"></i>${user.name}`);
+            }
+            
+            // Показываем профиль для всех авторизованных пользователей
+            $('#profileDropdown').show();
+            
+            // Показываем админ панель только для администраторов
+            if (auth.hasRole('admin')) {
+                $('#adminDropdown').show();
+                console.log('Показана панель администратора');
+            } else {
+                $('#adminDropdown').hide();
+                console.log('Скрыта панель администратора');
+            }
+        } else {
+            console.log('Пользователь не авторизован');
+            $('#profileDropdown').hide();
+            $('#adminDropdown').hide();
+        }
+    }
+
+    // Загрузка категорий в навигацию
+    async loadCategoriesNav() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const categoriesNav = $('#categoriesNav');
+            
+            // Очищаем существующие категории (кроме "Главная")
+            categoriesNav.find('li:not(:first-child)').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li class="nav-item">
+                            <a class="nav-link" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    categoriesNav.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    }
+
+    // Загрузка категорий в выпадающее меню
+    async loadCategoriesDropdown() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const dropdown = $('#catalogCategoriesDropdown');
+            
+            // Очищаем существующие категории (кроме "Все позиции" и разделителя)
+            dropdown.find('li:not(:first-child):not(:nth-child(2))').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li>
+                            <a class="dropdown-item" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    dropdown.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий в выпадающее меню:', error);
+        }
     }
 }
 

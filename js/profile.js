@@ -10,9 +10,36 @@ class ProfileManager {
     }
 
     init() {
-        $(document).ready(() => {
-            this.loadProfile();
-            this.bindEvents();
+        $(document).ready(async () => {
+            try {
+                // Проверяем авторизацию
+                if (!auth.isUserAuthenticated()) {
+                    console.log('Пользователь не авторизован, перенаправление на login.html');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('Инициализация профиля для пользователя:', auth.getCurrentUser()?.name);
+
+                // Загружаем профиль
+                await this.loadProfile();
+                
+                // Загружаем категории в навигацию
+                await this.loadCategoriesNav();
+                
+                // Загружаем категории в выпадающее меню
+                await this.loadCategoriesDropdown();
+                
+                // Обновляем информацию о пользователе
+                this.updateUserInfo();
+                
+                // Привязываем события
+                this.bindEvents();
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                auth.showNotification('Ошибка загрузки данных', 'danger');
+            }
         });
     }
 
@@ -29,6 +56,13 @@ class ProfileManager {
         $('#editProfileForm').on('submit', (e) => {
             e.preventDefault();
             this.saveProfile();
+        });
+
+        // Обработчик выхода
+        $('#logoutBtn').on('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+            window.location.href = 'login.html';
         });
     }
 
@@ -426,6 +460,78 @@ class ProfileManager {
         }
 
         return recommendations;
+    }
+
+    // Обновление информации о пользователе
+    updateUserInfo() {
+        const user = auth.getCurrentUser();
+        if (user) {
+            $('#currentUserInfo').text(user.name);
+            $('#loginLink').hide();
+            $('#profileDropdown').show();
+            $('#adminDropdown').show();
+        } else {
+            $('#currentUserInfo').text('Гость');
+            $('#loginLink').show();
+            $('#profileDropdown').hide();
+            $('#adminDropdown').hide();
+        }
+    }
+
+    // Загрузка категорий в навигацию
+    async loadCategoriesNav() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const categoriesNav = $('#categoriesNav');
+            
+            // Очищаем существующие категории (кроме "Главная")
+            categoriesNav.find('li:not(:first-child)').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li class="nav-item">
+                            <a class="nav-link" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    categoriesNav.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    }
+
+    // Загрузка категорий в выпадающее меню
+    async loadCategoriesDropdown() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const dropdown = $('#catalogCategoriesDropdown');
+            
+            // Очищаем существующие категории (кроме "Все позиции" и разделителя)
+            dropdown.find('li:not(:first-child):not(:nth-child(2))').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li>
+                            <a class="dropdown-item" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    dropdown.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий в выпадающее меню:', error);
+        }
     }
 }
 

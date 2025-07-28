@@ -9,27 +9,46 @@
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Навигационная панель -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+
+
+    <!-- Главная навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <i class="fas fa-warehouse me-2"></i>
-                Склад-Менеджер
+                <i class="fas fa-warehouse me-2 text-primary"></i>
+                <span class="fw-bold">Склад-Менеджер</span>
             </a>
+            
+            <!-- Поиск в шапке -->
+            <div class="navbar-search me-auto ms-4">
+                <div class="input-group" style="width: 400px;">
+                    <input type="text" class="form-control" placeholder="Поиск позиций..." id="headerSearch">
+                    <button class="btn btn-primary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="index.html">
                             <i class="fas fa-home me-1"></i>Главная
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="catalog.html">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-boxes me-1"></i>Каталог
                         </a>
+                        <ul class="dropdown-menu" id="catalogCategoriesDropdown">
+                            <li><a class="dropdown-item" href="catalog.html">Все позиции</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <!-- Категории будут загружены динамически -->
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="history.html">
@@ -41,19 +60,17 @@
                             <i class="fas fa-search me-1"></i>Поиск
                         </a>
                     </li>
-                </ul>
-                <ul class="navbar-nav">
                     <li class="nav-item dropdown" id="adminDropdown" style="display: none;">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-cog me-1"></i>Администрирование
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="admin/users.html">Управление пользователями</a></li>
-                            <li><a class="dropdown-item" href="admin/categories.html">Категории товаров</a></li>
+                            <li><a class="dropdown-item" href="admin/categories.html">Категории позиций</a></li>
                             <li><a class="dropdown-item" href="admin/reports.html">Отчеты</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item dropdown" id="profileDropdown">
+                    <li class="nav-item dropdown" id="profileDropdown" style="display: none;">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user me-1"></i>Профиль
                         </a>
@@ -68,6 +85,24 @@
         </div>
     </nav>
 
+    <!-- Панель категорий -->
+    <div class="categories-bar bg-light border-bottom">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-pills categories-nav" id="categoriesNav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">
+                                <i class="fas fa-home me-1"></i>Главная
+                            </a>
+                        </li>
+                        <!-- Категории будут загружены динамически -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Основной контент -->
     <main class="container mt-4">
         <!-- Заголовок страницы -->
@@ -77,16 +112,17 @@
                     <div>
                         <h1 class="mb-1">
                             <i class="fas fa-boxes me-2"></i>
-                            Каталог товаров
+                            Каталог позиций
                         </h1>
-                        <p class="text-muted mb-0">Управление товарными позициями склада</p>
+                        <p class="text-muted mb-0">Управление позициями склада</p>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-primary" id="exportBtn">
                             <i class="fas fa-download me-1"></i>Экспорт
                         </button>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal" id="addItemBtn">
-                            <i class="fas fa-plus me-1"></i>Добавить товар
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal" id="addItemBtn" 
+                                style="display: none;" title="Требуются права администратора или менеджера">
+                            <i class="fas fa-plus me-1"></i>Добавить позицию
                         </button>
                     </div>
                 </div>
@@ -97,7 +133,7 @@
         <div class="catalog-filters">
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <label for="searchInput" class="form-label">Поиск товаров</label>
+                    <label for="searchInput" class="form-label">Поиск позиций</label>
                     <div class="input-group">
                         <span class="input-group-text">
                             <i class="fas fa-search"></i>
@@ -154,7 +190,7 @@
                         <div class="d-flex justify-content-between">
                             <div>
                                 <h4 class="card-title" id="totalItemsCount">0</h4>
-                                <p class="card-text">Всего товаров</p>
+                                <p class="card-text">Всего позиций</p>
                             </div>
                             <i class="fas fa-boxes fa-2x"></i>
                         </div>

@@ -16,10 +16,39 @@ class SearchManager {
     }
 
     init() {
-        $(document).ready(() => {
-            this.loadCategories();
-            this.bindEvents();
-            this.initializeFilters();
+        $(document).ready(async () => {
+            try {
+                // Проверяем авторизацию
+                if (!auth.isUserAuthenticated()) {
+                    console.log('Пользователь не авторизован, перенаправление на login.html');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('Инициализация поиска для пользователя:', auth.getCurrentUser()?.name);
+
+                // Загружаем категории
+                await this.loadCategories();
+                
+                // Загружаем категории в навигацию
+                await this.loadCategoriesNav();
+                
+                // Загружаем категории в выпадающее меню
+                await this.loadCategoriesDropdown();
+                
+                // Обновляем информацию о пользователе
+                this.updateUserInfo();
+                
+                // Привязываем события
+                this.bindEvents();
+                
+                // Инициализируем фильтры
+                this.initializeFilters();
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                auth.showNotification('Ошибка загрузки данных', 'danger');
+            }
         });
     }
 
@@ -44,6 +73,13 @@ class SearchManager {
         $('#resultsTabs a').on('click', (e) => {
             e.preventDefault();
             $(e.target).tab('show');
+        });
+
+        // Обработчик выхода
+        $('#logoutBtn').on('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+            window.location.href = 'login.html';
         });
     }
 
@@ -113,7 +149,7 @@ class SearchManager {
         this.filters.endDate = $('#endDate').val();
     }
 
-    // Поиск товаров
+            // Поиск позиций
     async searchItems(query) {
         if (this.filters.searchType === 'operations') {
             this.searchResults.items = [];
@@ -218,7 +254,7 @@ class SearchManager {
                 <div class="col-12">
                     <div class="empty-state">
                         <i class="fas fa-box-open"></i>
-                        <h5>Товары не найдены</h5>
+                        <h5>Позиции не найдены</h5>
                         <p>Попробуйте изменить поисковый запрос</p>
                     </div>
                 </div>
@@ -226,7 +262,7 @@ class SearchManager {
             return;
         }
 
-        // Пагинация для товаров
+        // Пагинация для позиций
         const totalPages = Math.ceil(this.searchResults.items.length / this.resultsPerPage);
         const startIndex = (this.currentPage - 1) * this.resultsPerPage;
         const endIndex = startIndex + this.resultsPerPage;
@@ -238,7 +274,7 @@ class SearchManager {
         });
     }
 
-    // Создание карточки товара
+            // Создание карточки позиции
     createItemCard(item) {
         const category = this.getCategoryInfo(item.category);
         const stockStatus = this.getStockStatus(item);
@@ -404,7 +440,7 @@ class SearchManager {
             return;
         }
 
-        // Сортировка товаров
+        // Сортировка позиций
         this.searchResults.items.sort((a, b) => {
             let aValue = a[sortBy];
             let bValue = b[sortBy];
@@ -475,7 +511,7 @@ class SearchManager {
             csv += `Запрос: ${this.currentQuery}\n`;
             csv += `Дата поиска: ${new Date().toLocaleDateString('ru-RU')}\n\n`;
 
-            // Экспорт товаров
+            // Экспорт позиций
             if (this.searchResults.items.length > 0) {
                 csv += 'ТОВАРЫ\n';
                 csv += 'ID,Название,Категория,Цена,Количество,Описание\n';
@@ -513,7 +549,7 @@ class SearchManager {
         }
     }
 
-    // Просмотр деталей товара
+            // Просмотр деталей позиции
     async viewItemDetails(itemId) {
         try {
             const item = await this.warehouse.getItemById(itemId);
@@ -587,8 +623,8 @@ class SearchManager {
             $('#itemDetailsModal').modal('show');
             
         } catch (error) {
-            console.error('Ошибка при загрузке деталей товара:', error);
-            auth.showNotification('Ошибка при загрузке деталей товара', 'danger');
+            console.error('Ошибка при загрузке деталей позиции:', error);
+            auth.showNotification('Ошибка при загрузке деталей позиции', 'danger');
         }
     }
 
@@ -660,6 +696,78 @@ class SearchManager {
     // Скрыть индикатор загрузки
     hideLoading() {
         $('#loadingState').hide();
+    }
+
+    // Обновление информации о пользователе
+    updateUserInfo() {
+        const user = auth.getCurrentUser();
+        if (user) {
+            $('#currentUserInfo').text(user.name);
+            $('#loginLink').hide();
+            $('#profileDropdown').show();
+            $('#adminDropdown').show();
+        } else {
+            $('#currentUserInfo').text('Гость');
+            $('#loginLink').show();
+            $('#profileDropdown').hide();
+            $('#adminDropdown').hide();
+        }
+    }
+
+    // Загрузка категорий в навигацию
+    async loadCategoriesNav() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const categoriesNav = $('#categoriesNav');
+            
+            // Очищаем существующие категории (кроме "Главная")
+            categoriesNav.find('li:not(:first-child)').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li class="nav-item">
+                            <a class="nav-link" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    categoriesNav.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий:', error);
+        }
+    }
+
+    // Загрузка категорий в выпадающее меню
+    async loadCategoriesDropdown() {
+        try {
+            const categories = await this.warehouse.getCategories();
+            const dropdown = $('#catalogCategoriesDropdown');
+            
+            // Очищаем существующие категории (кроме "Все позиции" и разделителя)
+            dropdown.find('li:not(:first-child):not(:nth-child(2))').remove();
+            
+            // Добавляем активные категории
+            categories.forEach(category => {
+                if (category.active) {
+                    const categoryLink = `
+                        <li>
+                            <a class="dropdown-item" href="catalog.html?category=${category.id}" title="${category.description || ''}">
+                                <i class="${category.icon}" style="color: ${category.color || '#2c5aa0'}"></i>
+                                ${category.name}
+                            </a>
+                        </li>
+                    `;
+                    dropdown.append(categoryLink);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки категорий в выпадающее меню:', error);
+        }
     }
 }
 

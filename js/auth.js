@@ -39,14 +39,17 @@ class AuthSystem {
             try {
                 this.currentUser = JSON.parse(userData);
                 this.isAuthenticated = true;
+                console.log('Пользователь авторизован:', this.currentUser);
                 this.updateUI();
             } catch (error) {
                 console.error('Ошибка при загрузке данных пользователя:', error);
                 this.logout();
             }
         } else {
+            console.log('Пользователь не авторизован');
             // Если нет сессии и мы не на странице входа, перенаправляем
             if (!window.location.pathname.includes('login.html')) {
+                console.log('Перенаправление на страницу входа');
                 window.location.href = 'login.html';
             }
         }
@@ -54,8 +57,8 @@ class AuthSystem {
 
     // Вход в систему
     login() {
-        const username = $('#username').val();
-        const password = $('#password').val();
+        const username = $('#username').val().trim();
+        const password = $('#password').val().trim();
 
         if (!username || !password) {
             this.showNotification('Пожалуйста, заполните все поля', 'warning');
@@ -77,11 +80,24 @@ class AuthSystem {
             
             this.showNotification('Успешный вход в систему', 'success');
             
+            // Скрываем индикатор загрузки и восстанавливаем кнопку
+            $('#loginLoading').hide();
+            $('#loginBtn').prop('disabled', false);
+            
             // Перенаправляем на главную страницу
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 1000);
         } else {
+            // Скрываем индикатор загрузки и восстанавливаем кнопку
+            $('#loginLoading').hide();
+            $('#loginBtn').prop('disabled', false);
+            
+            // Показываем ошибку в полях
+            $('#username').addClass('is-invalid');
+            $('#password').addClass('is-invalid');
+            $('#usernameError').text('Неверное имя пользователя или пароль').show();
+            
             this.showNotification('Неверное имя пользователя или пароль', 'danger');
         }
     }
@@ -101,18 +117,29 @@ class AuthSystem {
 
     // Обновление интерфейса в зависимости от прав доступа
     updateUI() {
-        if (!this.currentUser) return;
+        if (!this.currentUser) {
+            console.log('Нет текущего пользователя для обновления UI');
+            return;
+        }
+
+        console.log('Обновление UI для пользователя:', this.currentUser.name);
 
         // Обновляем информацию о пользователе в навигации
-        $('#profileDropdown .dropdown-toggle').html(`
-            <i class="fas fa-user me-1"></i>${this.currentUser.name}
-        `);
+        const profileToggle = $('#profileDropdown .dropdown-toggle');
+        if (profileToggle.length) {
+            profileToggle.html(`<i class="fas fa-user me-1"></i>${this.currentUser.name}`);
+        }
 
+        // Показываем профиль для всех авторизованных пользователей
+        $('#profileDropdown').show();
+        
         // Показываем/скрываем элементы администрирования
         if (this.hasRole('admin')) {
             $('#adminDropdown').show();
+            console.log('Показана панель администратора');
         } else {
             $('#adminDropdown').hide();
+            console.log('Скрыта панель администратора');
         }
 
         // Обновляем права доступа для кнопок
@@ -188,7 +215,7 @@ class AuthSystem {
 
     // Проверка аутентификации
     isUserAuthenticated() {
-        return this.isAuthenticated;
+        return this.isAuthenticated && this.currentUser !== null;
     }
 
     // Получение списка пользователей (имитация базы данных)
