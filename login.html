@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему - Склад-Менеджер</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fas fa-warehouse fa-3x mb-3"></i>
+                <h2>Склад-Менеджер</h2>
+                <p class="mb-0">Система управления складом</p>
+            </div>
+            <div class="login-body">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user me-2"></i>Имя пользователя
+                        </label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Пароль
+                        </label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-3">
+                        <i class="fas fa-sign-in-alt me-2"></i>Войти в систему
+                    </button>
+                </form>
+
+                <!-- Информация о тестовых пользователях -->
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-info-circle me-2"></i>Тестовые учетные записи:
+                    </h6>
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <small class="text-muted">
+                                <strong>Администратор:</strong> admin / admin123
+                            </small>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <small class="text-muted">
+                                <strong>Менеджер:</strong> manager / manager123
+                            </small>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <small class="text-muted">
+                                <strong>Оператор:</strong> operator / operator123
+                            </small>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">
+                                <strong>Наблюдатель:</strong> viewer / viewer123
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Информация о правах доступа -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6 class="text-muted mb-2">
+                        <i class="fas fa-shield-alt me-2"></i>Уровни доступа:
+                    </h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">
+                                <strong>Администратор:</strong><br>
+                                Полный доступ ко всем функциям
+                            </small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">
+                                <strong>Менеджер:</strong><br>
+                                Чтение и запись данных
+                            </small>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <small class="text-muted">
+                                <strong>Оператор:</strong><br>
+                                Только чтение данных
+                            </small>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <small class="text-muted">
+                                <strong>Наблюдатель:</strong><br>
+                                Ограниченный просмотр
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html> 
