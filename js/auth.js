@@ -39,17 +39,17 @@ class AuthSystem {
             try {
                 this.currentUser = JSON.parse(userData);
                 this.isAuthenticated = true;
-                console.log('Пользователь авторизован:', this.currentUser);
+                // Пользователь авторизован
                 this.updateUI();
             } catch (error) {
-                console.error('Ошибка при загрузке данных пользователя:', error);
+                // Ошибка при загрузке данных пользователя
                 this.logout();
             }
         } else {
-            console.log('Пользователь не авторизован');
+            // Пользователь не авторизован
             // Если нет сессии и мы не на странице входа, перенаправляем
             if (!window.location.pathname.includes('login.html')) {
-                console.log('Перенаправление на страницу входа');
+                // Перенаправление на страницу входа
                 window.location.href = 'login.html';
             }
         }
@@ -118,11 +118,11 @@ class AuthSystem {
     // Обновление интерфейса в зависимости от прав доступа
     updateUI() {
         if (!this.currentUser) {
-            console.log('Нет текущего пользователя для обновления UI');
+            // Нет текущего пользователя для обновления UI
             return;
         }
 
-        console.log('Обновление UI для пользователя:', this.currentUser.name);
+        // Обновление UI для пользователя
 
         // Обновляем информацию о пользователе в навигации
         const profileToggle = $('#profileDropdown .dropdown-toggle');
@@ -136,10 +136,10 @@ class AuthSystem {
         // Показываем/скрываем элементы администрирования
         if (this.hasRole('admin')) {
             $('#adminDropdown').show();
-            console.log('Показана панель администратора');
+            // Показана панель администратора
         } else {
             $('#adminDropdown').hide();
-            console.log('Скрыта панель администратора');
+            // Скрыта панель администратора
         }
 
         // Обновляем права доступа для кнопок

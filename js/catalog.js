@@ -112,6 +112,9 @@ class CatalogManager {
             console.error('Ошибка при загрузке каталога:', error);
             auth.showNotification('Ошибка при загрузке каталога', 'danger');
             this.hideLoading();
+        } finally {
+            // Проверяем уведомления о низком остатке
+            await this.warehouse.checkAndSendNotifications();
         }
     }
 

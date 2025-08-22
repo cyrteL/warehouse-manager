@@ -265,9 +265,6 @@ class ProfileManager {
         $('#emailNotifications').prop('checked', settings.emailNotifications !== false);
         $('#lowStockAlerts').prop('checked', settings.lowStockAlerts !== false);
         $('#operationReports').prop('checked', settings.operationReports || false);
-        
-        $('#themeSelect').val(settings.theme || 'light');
-        $('#languageSelect').val(settings.language || 'ru');
     }
 
     // Сохранение настроек
@@ -275,9 +272,7 @@ class ProfileManager {
         const settings = {
             emailNotifications: $('#emailNotifications').is(':checked'),
             lowStockAlerts: $('#lowStockAlerts').is(':checked'),
-            operationReports: $('#operationReports').is(':checked'),
-            theme: $('#themeSelect').val(),
-            language: $('#languageSelect').val()
+            operationReports: $('#operationReports').is(':checked')
         };
 
         localStorage.setItem('user_settings', JSON.stringify(settings));
@@ -368,6 +363,11 @@ class ProfileManager {
     viewActivity() {
         // В реальном приложении здесь можно открыть страницу с детальной статистикой
         auth.showNotification('Функция просмотра активности находится в разработке', 'info');
+    }
+
+    // Генерация еженедельного отчета
+    generateWeeklyReport() {
+        this.warehouse.generateWeeklyReports();
     }
 
     // Валидация email

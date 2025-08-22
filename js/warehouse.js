@@ -2,9 +2,93 @@
 
 class WarehouseManager {
     constructor() {
+        this.apiBase = (window && window.API_BASE) ? window.API_BASE : 'http://localhost:3001/api';
         this.items = this.loadItems();
         this.operations = this.loadOperations();
         this.categories = this.loadCategories();
+    }
+
+    // Универсальный вызов API с таймаутом и graceful fallback
+    async apiRequest(path, options = {}) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 5000);
+        try {
+            const res = await fetch(`${this.apiBase}${path}`, {
+                method: options.method || 'GET',
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                body: options.body ? JSON.stringify(options.body) : undefined,
+                signal: controller.signal,
+                credentials: 'omit'
+            });
+            if (!res.ok) throw new Error(`API ${res.status}`);
+            return await res.json();
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    // Отправка уведомления о низком остатке через API
+    async sendLowStockEmailNotification(items) {
+        try {
+            const response = await this.apiRequest('/notifications/low-stock', {
+                method: 'POST',
+                body: { items }
+            });
+            
+            console.log('Уведомления о низком остатке отправлены:', response);
+            return response;
+        } catch (error) {
+            console.error('Ошибка отправки уведомлений о низком остатке:', error);
+            throw error;
+        }
+    }
+
+    // Отправка уведомления об операции через API
+    async sendOperationEmailNotificationAPI(operation) {
+        try {
+            const response = await this.apiRequest('/notifications/operation', {
+                method: 'POST',
+                body: { operation }
+            });
+            
+            console.log('Уведомления об операции отправлены:', response);
+            return response;
+        } catch (error) {
+            console.error('Ошибка отправки уведомлений об операции:', error);
+            throw error;
+        }
+    }
+
+    // Отправка еженедельного отчета через API
+    async sendWeeklyReportEmailNotification(report) {
+        try {
+            const response = await this.apiRequest('/notifications/weekly-report', {
+                method: 'POST',
+                body: { report }
+            });
+            
+            console.log('Еженедельные отчеты отправлены:', response);
+            return response;
+        } catch (error) {
+            console.error('Ошибка отправки еженедельных отчетов:', error);
+            throw error;
+        }
+    }
+
+    // Тестовая отправка email
+    async sendTestEmail(email, subject, message) {
+        try {
+            const response = await this.apiRequest('/notifications/test', {
+                method: 'POST',
+                body: { email, subject, message }
+            });
+            
+            console.log('Тестовое уведомление отправлено:', response);
+            return response;
+        } catch (error) {
+            console.error('Ошибка отправки тестового уведомления:', error);
+            throw error;
+        }
     }
 
             // Загрузка позиций из localStorage
@@ -91,7 +175,28 @@ class WarehouseManager {
 
                 // Получение всех позиций
     async getAllItems() {
-        return this.items;
+        try {
+            const data = await this.apiRequest('/items');
+            this.items = (data || []).map(row => ({
+                id: row.id,
+                name: row.name,
+                category: row.category_id || 'uncategorized',
+                price: Number(row.price || 0),
+                quantity: Number(row.quantity || 0),
+                description: row.description || '',
+                barcode: row.barcode || '',
+                minQuantity: Number(row.min_quantity || 0),
+                location: row.location || '',
+                supplier: row.supplier || '',
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
+            }));
+            this.saveItems();
+            this.updateCategoryItemCounts();
+            return this.items;
+        } catch (e) {
+            return this.items;
+        }
     }
 
     // Синхронное получение всех позиций
@@ -101,7 +206,25 @@ class WarehouseManager {
 
     // Получение позиции по ID
     async getItemById(id) {
-        return this.items.find(item => item.id === parseInt(id));
+        try {
+            const row = await this.apiRequest(`/items/${id}`);
+            return {
+                id: row.id,
+                name: row.name,
+                category: row.category_id || 'uncategorized',
+                price: Number(row.price || 0),
+                quantity: Number(row.quantity || 0),
+                description: row.description || '',
+                barcode: row.barcode || '',
+                minQuantity: Number(row.min_quantity || 0),
+                location: row.location || '',
+                supplier: row.supplier || '',
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
+            };
+        } catch (e) {
+            return this.items.find(item => item.id === parseInt(id));
+        }
     }
 
     // Добавление новой позиции
@@ -121,13 +244,29 @@ class WarehouseManager {
             updatedAt: new Date().toISOString()
         };
 
+        // Попытка создать через API
+        try {
+            const created = await this.apiRequest('/items', {
+                method: 'POST',
+                body: {
+                    name: newItem.name,
+                    category_id: newItem.category === 'uncategorized' ? null : newItem.category,
+                    price: newItem.price,
+                    quantity: newItem.quantity,
+                    description: newItem.description,
+                    barcode: newItem.barcode,
+                    min_quantity: newItem.minQuantity,
+                    location: newItem.location,
+                    supplier: newItem.supplier
+                }
+            });
+            if (created && created.id) newItem.id = created.id;
+        } catch (e) {}
+
         this.items.push(newItem);
         this.saveItems();
-
-        // Обновляем количество товаров в категории
         this.updateCategoryItemCounts();
 
-        // Создаем операцию прихода для новой позиции
         await this.createOperation({
             type: 'incoming',
             itemId: newItem.id,
@@ -144,6 +283,23 @@ class WarehouseManager {
         if (itemIndex === -1) {
             throw new Error('Позиция не найдена');
         }
+
+        try {
+            await this.apiRequest(`/items/${id}`, {
+                method: 'PUT',
+                body: {
+                    name: itemData.name,
+                    category_id: itemData.category === 'uncategorized' ? null : itemData.category,
+                    price: itemData.price,
+                    quantity: itemData.quantity,
+                    description: itemData.description,
+                    barcode: itemData.barcode,
+                    min_quantity: itemData.minQuantity,
+                    location: itemData.location,
+                    supplier: itemData.supplier
+                }
+            });
+        } catch (e) {}
 
         this.items[itemIndex] = {
             ...this.items[itemIndex],
@@ -165,6 +321,8 @@ class WarehouseManager {
         if (itemIndex === -1) {
             throw new Error('Позиция не найдена');
         }
+
+        try { await this.apiRequest(`/items/${id}`, { method: 'DELETE' }); } catch (e) {}
 
         this.items.splice(itemIndex, 1);
         this.saveItems();
@@ -194,6 +352,13 @@ class WarehouseManager {
         this.updateCategoryItemCounts();
 
         // Создаем операцию
+        try {
+            await this.apiRequest('/operations/incoming', {
+                method: 'POST',
+                body: { itemId, quantity, supplier: operationData.incomingSupplier || '', notes: operationData.incomingNotes || '', employeeId: auth.getCurrentUser()?.id }
+            });
+        } catch (e) {}
+
         const operation = await this.createOperation({
             type: 'incoming',
             itemId: itemId,
@@ -229,6 +394,13 @@ class WarehouseManager {
         this.updateCategoryItemCounts();
 
         // Создаем операцию
+        try {
+            await this.apiRequest('/operations/outgoing', {
+                method: 'POST',
+                body: { itemId, quantity, recipient: operationData.outgoingRecipient || '', notes: operationData.outgoingNotes || '', employeeId: auth.getCurrentUser()?.id }
+            });
+        } catch (e) {}
+
         const operation = await this.createOperation({
             type: 'outgoing',
             itemId: itemId,
@@ -263,18 +435,40 @@ class WarehouseManager {
         this.operations.push(operation);
         this.saveOperations();
 
+        // Проверяем и отправляем уведомления
+        await this.checkAndSendNotifications(operation);
+
         return operation;
     }
 
     // Получение последних операций
     async getRecentOperations(limit = 10) {
-        return this.operations
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, limit);
+        try {
+            const ops = await this.apiRequest(`/operations?sortBy=date&sortOrder=desc`);
+            this.syncOperationsFromApi(ops);
+            return this.operations.slice(0, limit);
+        } catch (e) {
+            return this.operations
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, limit);
+        }
     }
 
     // Получение операций по фильтрам
     async getOperations(filters = {}) {
+        try {
+            const q = new URLSearchParams();
+            if (filters.type) q.set('type', filters.type);
+            if (filters.startDate) q.set('startDate', filters.startDate);
+            if (filters.endDate) q.set('endDate', filters.endDate);
+            if (filters.itemId) q.set('itemId', filters.itemId);
+            if (filters.sortBy) q.set('sortBy', filters.sortBy);
+            if (filters.sortOrder) q.set('sortOrder', filters.sortOrder);
+            const ops = await this.apiRequest(`/operations?${q.toString()}`);
+            this.syncOperationsFromApi(ops);
+            return this.operations;
+        } catch (e) {}
+
         let filteredOperations = [...this.operations];
 
         // Фильтр по типу
@@ -325,6 +519,25 @@ class WarehouseManager {
         return filteredOperations;
     }
 
+    // Приведение формата операций из API и сохранение в localStorage
+    syncOperationsFromApi(apiOps) {
+        this.operations = (apiOps || []).map(op => ({
+            id: op.id,
+            type: op.type,
+            itemId: op.itemId || op.item_id,
+            itemName: op.itemName || op.item_name || op.itemName,
+            quantity: Number(op.quantity || 0),
+            employeeId: op.employeeId || op.employee_id,
+            employeeName: op.employeeName || op.employee_name,
+            date: op.date,
+            status: op.status || 'completed',
+            supplier: op.supplier || '',
+            recipient: op.recipient || '',
+            notes: op.notes || ''
+        })).sort((a, b) => new Date(b.date) - new Date(a.date));
+        this.saveOperations();
+    }
+
     // Поиск товаров
     async searchItems(query, filters = {}) {
         let results = [...this.items];
@@ -370,9 +583,116 @@ class WarehouseManager {
         return this.items.filter(item => item.quantity <= item.minQuantity);
     }
 
+    // Проверка и отправка уведомлений
+    async checkAndSendNotifications(operation = null) {
+        try {
+            const settings = JSON.parse(localStorage.getItem('user_settings') || '{}');
+            const currentUser = JSON.parse(localStorage.getItem('warehouse_user') || '{}');
+            
+            // Проверяем оповещения о низком остатке
+            if (settings.lowStockAlerts) {
+                await this.checkLowStockAlerts(currentUser);
+            }
+            
+            // Проверяем email уведомления об операциях
+            if (settings.emailNotifications && operation) {
+                await this.sendOperationEmailNotification(operation, currentUser);
+            }
+            
+        } catch (error) {
+            console.error('Ошибка при отправке уведомлений:', error);
+        }
+    }
+
+    // Проверка товаров с низким запасом
+    async checkLowStockAlerts(user) {
+        try {
+            const lowStockItems = await this.getLowStockItems();
+            
+            if (lowStockItems.length > 0) {
+                // Показываем уведомление в интерфейсе
+                const itemNames = lowStockItems.map(item => item.name).join(', ');
+                auth.showNotification(
+                    `Внимание! Товары с низким запасом: ${itemNames}`, 
+                    'warning'
+                );
+                
+                // Отправляем email уведомление через API
+                await this.sendLowStockEmailNotification(lowStockItems);
+            }
+        } catch (error) {
+            console.error('Ошибка при проверке низкого остатка:', error);
+        }
+    }
+
+    // Отправка уведомления об операции
+    async sendOperationEmailNotification(operation, user) {
+        try {
+            const operationType = operation.type === 'incoming' ? 'Приход' : 'Расход';
+            const message = `Операция ${operationType}: ${operation.itemName} - ${operation.quantity} шт.`;
+            
+            // Отправляем email уведомление через API
+            await this.sendOperationEmailNotificationAPI(operation);
+            
+            // Показываем уведомление в интерфейсе
+            auth.showNotification(`Уведомление об операции отправлено на ${user.email}`, 'info');
+        } catch (error) {
+            console.error('Ошибка при отправке уведомления об операции:', error);
+        }
+    }
+
+    // Генерация и отправка еженедельных отчетов
+    async generateWeeklyReports() {
+        try {
+            const settings = JSON.parse(localStorage.getItem('user_settings') || '{}');
+            const currentUser = JSON.parse(localStorage.getItem('warehouse_user') || '{}');
+            
+            if (settings.operationReports) {
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                
+                const weeklyOperations = this.operations.filter(op => 
+                    new Date(op.date) >= weekAgo
+                );
+                
+                if (weeklyOperations.length > 0) {
+                    const report = {
+                        period: 'За последнюю неделю',
+                        totalOperations: weeklyOperations.length,
+                        incoming: weeklyOperations.filter(op => op.type === 'incoming').length,
+                        outgoing: weeklyOperations.filter(op => op.type === 'outgoing').length,
+                        operations: weeklyOperations
+                    };
+                    
+                    // Отправляем еженедельный отчет через API
+                    await this.sendWeeklyReportEmailNotification(report);
+                    
+                    auth.showNotification('Еженедельный отчет отправлен на email', 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка при генерации еженедельного отчета:', error);
+        }
+    }
+
     // Получение категорий
     async getCategories() {
-        return this.categories;
+        try {
+            const rows = await this.apiRequest('/categories');
+            this.categories = (rows || []).map(r => ({
+                id: r.id,
+                name: r.name,
+                description: r.description || '',
+                icon: r.icon || 'fas fa-tag',
+                color: r.color || '#2c5aa0',
+                active: !!(r.active ?? 1),
+                itemCount: Number(r.itemCount || 0)
+            }));
+            this.saveCategories();
+            return this.categories;
+        } catch (e) {
+            return this.categories;
+        }
     }
 
     // Получение категории по ID
@@ -389,6 +709,11 @@ class WarehouseManager {
             createdAt: new Date().toISOString()
         };
 
+        try {
+            const created = await this.apiRequest('/categories', { method: 'POST', body: newCategory });
+            if (created && created.id) newCategory.id = created.id;
+        } catch (e) {}
+
         this.categories.push(newCategory);
         this.saveCategories();
         return newCategory;
@@ -400,6 +725,8 @@ class WarehouseManager {
         if (categoryIndex === -1) {
             throw new Error('Категория не найдена');
         }
+
+        try { await this.apiRequest(`/categories/${id}`, { method: 'PUT', body: categoryData }); } catch (e) {}
 
         this.categories[categoryIndex] = {
             ...this.categories[categoryIndex],
@@ -417,6 +744,8 @@ class WarehouseManager {
         if (categoryIndex === -1) {
             throw new Error('Категория не найдена');
         }
+
+        try { await this.apiRequest(`/categories/${id}`, { method: 'DELETE' }); } catch (e) {}
 
         // Удаляем все позиции этой категории
         this.items = this.items.filter(item => item.category !== id);

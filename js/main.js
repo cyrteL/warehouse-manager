@@ -12,12 +12,12 @@ class MainApp {
             try {
                 // Проверяем авторизацию
                 if (!auth.isUserAuthenticated()) {
-                    console.log('Пользователь не авторизован, перенаправление на login.html');
+                    // Пользователь не авторизован, перенаправление на login.html
                     window.location.href = 'login.html';
                     return;
                 }
 
-                console.log('Инициализация главной страницы для пользователя:', auth.getCurrentUser()?.name);
+                // Инициализация главной страницы
 
                 // Загружаем данные дашборда
                 await this.loadDashboardData();
@@ -43,7 +43,7 @@ class MainApp {
                 this.initializeModals();
                 
             } catch (error) {
-                console.error('Ошибка инициализации:', error);
+                // Ошибка инициализации
                 auth.showNotification('Ошибка загрузки данных', 'danger');
             }
         });
@@ -92,6 +92,9 @@ class MainApp {
 
             // Скрываем индикатор загрузки
             this.hideLoading();
+
+            // Проверяем уведомления о низком остатке
+            await this.warehouse.checkAndSendNotifications();
 
         } catch (error) {
             console.error('Ошибка при загрузке данных:', error);
