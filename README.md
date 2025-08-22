@@ -420,8 +420,8 @@ warehouse-system/
 - **Разработка**: Roman Pylaev
 - **Дизайн**: Roman Pylaev
 - **Тестирование**: Roman Pylaev
-- **Production-готовность**: Roman Pylaev
 
 ## 📞 Контакты
 
 - **Telegram/Discord**: @dark7es
+
